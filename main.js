@@ -6,6 +6,7 @@ var turn;
 var compSymbol;
 var userX ='';
 var userO ='';
+var game;
 
 function init() {
   /* use touch events if they're supported, otherwise use mouse events */
@@ -31,7 +32,8 @@ socket.emit('login',{ //socket.emit ('mesajgonder') aracýlýðýyla server.js'de so
 });
 
 
-socket.on('waitingOtherPlayer', function (gameId) {
+socket.on('waitingOtherPlayer', function (gameServer) {
+ game = gameServer;
  var html = $("#X").html();
  $("#X").text(html + " - "+nick );
  $("#status").text("Waiting For Other Player..");
@@ -40,7 +42,8 @@ socket.on('waitingOtherPlayer', function (gameId) {
  compSymbol = 'O';
 });
 
-socket.on('readyForGame', function (game) {
+socket.on('readyForGame', function (gameServer) {
+ game = gameServer; 
  var html = $("#O").html();
  $("#X").text("PlayerX - "+game.userX);
  html = $("#X").html();
@@ -73,8 +76,8 @@ socket.on('startGame', function (game,changeTurn) {
 });
 
 
-socket.on('moveAndChangeTurn', function (move,changeTurn) {
- 
+socket.on('moveAndChangeTurn', function (move,changeTurn,gameServer) {
+ game = gameServer;
  squareSelectForOther(move,compSymbol);
  turn = changeTurn;
  
@@ -145,7 +148,7 @@ function squareSelected(evt, currentPlayer) {
     checkForWinner();
     switchPlayers(); 
 	turn = compSymbol;
-	socket.emit('moveAndChangeTurn',square.id,compSymbol);		
+	socket.emit('moveAndChangeTurn',square.id,compSymbol,game);		
   }
   }
 }

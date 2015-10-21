@@ -3,6 +3,7 @@ var playingGames = [];
 var waitingGames = [];
 var userX ='';
 var userO ='';
+var isProcessed = false;
 function Game(x,y) {
     this.gameNo = x;
 	this.userX = y;
@@ -11,51 +12,51 @@ function Game(x,y) {
 }
 
 
-var io = require('socket.io').listen(3000); //3000 portunu dinlemeye baþladýk.
-io.sockets.on('connection', function(socket){ // tüm node iþlemlerini kapsayan ana fonksiyonumuz
+var io = require('socket.io').listen(3000); 
+io.sockets.on('connection', function(socket){ 
        
-	 socket.on('login', function(user){ //clientte'ki mesajý aldýk
+	 socket.on('login', function(user){ 
          
-		 // usernames[user.uid] = user.uid;
-		  socket.username = user.uid;
-		
-		  //  socket.emit('mesajgitti', data) //server mesajý client'e geri gönderdi emit ile
-          //  socket.broadcast.emit('mesajgitti', data) //
-		
-		 if (waitingGames.length > 0) {
+		  
+		socket.username = user.uid;
+		isProcessed = false;
+		if (waitingGames.length == 0) {
+		   console.log("No waiting Games new Player created with WaitingGame");
+		   var key = makeid();
+		   var game = new Game(key,user.uid);
+		   waitingGames[0] = game;
+		   socket.join(key); 
+		   socket.emit('waitingOtherPlayer', game);
+		   isProcessed = true;
+		 }
+		 
+	     console.log("Length-1:"+waitingGames.length);
+		 if (waitingGames.length > 0 && !(isProcessed)) {
 		   console.log("You have been directed to waiting game..");
     	   var game = waitingGames[0];
 		   game.userO = user.uid;
-		   waitingGames[0] = game;
-		   socket.join(game.userX);  
+		   socket.join(game.gameNo);  
 		   userX = game.userX;
-		   socket.to(game.userX).emit('readyForGame', game);
-		 }
-
-
-		if (waitingGames.length == 0) {
-		   console.log("No waiting Games new Player created with WaitingGame");
-		   var game = new Game(1,user.uid);
-		   waitingGames[0] = game;
-		   socket.join(user.uid); 
-		   console.log('UserUid:'+user.uid);
-		   socket.emit('waitingOtherPlayer', 1);
-		   
-		  
+		   socket.to(game.gameNo).emit('readyForGame', game);
+		   delete waitingGames[0];
+		   delete game;
+		   waitingGames.length--;
+		   console.log("Length-2:"+waitingGames.length);
 		 }
 		
     });
 	
 	socket.on('startGame',function(game) {
 	
-	socket.to(game.userX).emit('startGame', game,'X');
+	socket.to(game.gameNo).emit('startGame', game,'X');
 	userO = game.userO;
 	
 	});
 
-	socket.on('moveAndChangeTurn',function(move,turn) {
+	socket.on('moveAndChangeTurn',function(move,turn,game) {
+	console.log("Game No:"+game.gameNo);
 	
-	socket.to(userX).emit('moveAndChangeTurn', move,turn);
+	socket.to(game.gameNo).emit('moveAndChangeTurn', move,turn,game);
 	
 	});
 	
@@ -70,4 +71,16 @@ io.sockets.on('connection', function(socket){ // tüm node iþlemlerini kapsayan a
 	
 	
 });
+
+
+function makeid()
+{
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    for( var i=0; i < 5; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+    return text;
+}
 
